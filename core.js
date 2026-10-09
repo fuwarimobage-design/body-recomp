@@ -1,3 +1,4 @@
+import {cleanTraining} from './training.js';
 export const VIEWS=['front','side','back'];
 export const dateKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 export function localTime(d=new Date()){return `${dateKey(d)}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}
@@ -16,7 +17,7 @@ export function validateState(raw,backup=false){
  const id=x=>typeof x==='string'&&x.length>0&&x.length<150;
  const num=(x,min,max)=>typeof x==='number'&&Number.isFinite(x)&&x>=min&&x<=max;
  const measurements=raw.measurements.map(m=>{if(!id(m.id)||!isTime(m.at)||!['weight','fat','waist'].some(k=>m[k]!==null)||![[m.weight,20,300],[m.fat,1,70],[m.waist,30,250]].every(([x,a,b])=>x===null||num(x,a,b)))fail();return {id:m.id,at:m.at,weight:m.weight,fat:m.fat,waist:m.waist};});
- const workouts=raw.workouts.map(w=>{if(!id(w.id)||!isDay(w.day)||!['quick','strength'].includes(w.type)||!isTime(w.at)||w.at.slice(0,10)!==w.day)fail();return {id:w.id,day:w.day,type:w.type,at:w.at};});
+ const workouts=raw.workouts.map(w=>{if(!id(w.id)||!isDay(w.day)||!['quick','strength'].includes(w.type)||!isTime(w.at)||w.at.slice(0,10)!==w.day)fail();if(w.training!==undefined&&w.type!=='strength')fail();return {id:w.id,day:w.day,type:w.type,at:w.at,...(w.training!==undefined?{training:cleanTraining(w.training)}:{})};});
  const photos=raw.photos.map(p=>{if(!id(p.id)||!isTime(p.at)||!VIEWS.includes(p.view)||!Number.isInteger(p.width)||!Number.isInteger(p.height)||p.width<1||p.height<1||p.width>4096||p.height>4096)fail();if(backup){if(typeof p.data!=='string'||!/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(p.data)||p.data.length>16000000)fail();}else if(!(p.blob instanceof Blob)||p.blob.type!=='image/jpeg')fail();return backup?{id:p.id,at:p.at,view:p.view,width:p.width,height:p.height,data:p.data}:{id:p.id,at:p.at,view:p.view,width:p.width,height:p.height,blob:p.blob};});
  unique(measurements,m=>m.id);unique(workouts,w=>w.id);unique(workouts,w=>`${w.day}/${w.type}`);unique(photos,p=>p.id);
  const s=raw.settings;if(!num(s.targetWeight,20,300)||!num(s.targetFat,1,70)||!Array.isArray(s.plans)||!s.plans.length||s.plans.length>5000)fail();
