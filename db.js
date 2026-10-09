@@ -1,0 +1,5 @@
+import {initialState,validateState} from './core.js';
+let database;
+export async function openDB(){database=await new Promise((resolve,reject)=>{const r=indexedDB.open('body-recomp-v1',1);r.onupgradeneeded=()=>r.result.createObjectStore('data');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.onblocked=()=>reject(new Error('別の画面でアプリを開いています。その画面を閉じてから再読み込みしてください。'));});database.onversionchange=()=>database.close();return database;}
+export async function readState(){return new Promise((resolve,reject)=>{const t=database.transaction('data','readonly'),r=t.objectStore('data').get('state');r.onsuccess=()=>{try{resolve(r.result?validateState(r.result):initialState());}catch(e){reject(e);}};r.onerror=()=>reject(r.error);});}
+export async function writeState(state){const clean=validateState(state);return new Promise((resolve,reject)=>{const t=database.transaction('data','readwrite');t.objectStore('data').put(clean,'state');t.oncomplete=()=>resolve(clean);t.onabort=()=>reject(t.error||new Error('保存を完了できませんでした。'));t.onerror=()=>{};});}
