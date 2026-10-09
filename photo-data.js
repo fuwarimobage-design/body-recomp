@@ -1,5 +1,6 @@
 // Persist bytes as text rather than relying on Safari's file-backed IDB Blobs.
 const cache=new WeakMap();
+export function cachedPhotoData(blob){return cache.get(blob);}
 export async function photoData(blob){
  if(cache.has(blob))return cache.get(blob);
  let data;
